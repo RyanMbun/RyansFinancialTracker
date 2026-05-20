@@ -1,27 +1,25 @@
-# Import Flask tools — Flask runs the web server, the rest handle requests and responses
+# Import Flask tools: Flask runs the web server, the rest handle requests and responses
 from flask import Flask, request, jsonify, render_template
 # csv lets us read and write .csv files (our simple database)
 import csv
 # os lets us check if files exist on the computer
 import os
-# Import our Expense class from the expense.py file we made
+# Import the Expense class from the expense.py file we made
 from expense import Expense
-# datetime lets us get today's date automatically
+# datetime lets me get today's date automatically
 from datetime import datetime
 
-# Create the Flask app — this is the engine that runs everything
+# Create the Flask app... this is the engine that runs everything
 app = Flask(__name__)
 
 # The name of the file where all expenses are saved
 FILE = "expenses.csv"
 # The list of categories users can pick from
 CATEGORIES = ["🍔 Food", "🏡 Home", "🏢 Work", "🎉 Fun", "📃 Misc"]
-# The default monthly budget — this can be changed by the user in the Settings tab
+# The default monthly budget, later ill make it so this can be changed by the user in the Settings tab
 BUDGET = 2000.0
 
 
-# ─── HELPER FUNCTIONS ─────────────────────────────────────────────────────────
-# These are not routes — they're just reusable tools our routes call
 
 # Opens the CSV file and returns all expenses as a list of dictionaries
 def read_expenses():
@@ -82,7 +80,6 @@ def delete_expense_by_index(index):
     return False
 
 
-# ─── ROUTES ───────────────────────────────────────────────────────────────────
 # Routes are URLs the browser can visit. Each one runs a function.
 
 # When the user visits the homepage (http://127.0.0.1:5000), send them the HTML page
