@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker</title>
+
+  <!-- Load two custom fonts from Google: Syne for headings, DM Mono for body text -->
+
+  <style>
+    /* Reset default browser spacing on every element */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* CSS variables — define colors once here, reuse them everywhere below */
+    :root {
+      --bg: #0e0e10;         /* page background (near black) */
+      --surface: #18181c;    /* card/panel background */
+      --surface2: #222228;   /* slightly lighter surface for inputs */
+      --border: #2e2e38;     /* border color */
+      --accent: #c8f060;     /* bright green — main highlight color */
+      --accent2: #60d0f0;    /* light blue — secondary highlight */
+      --danger: #f06060;     /* red — used for delete and over-budget */
+      --text: #f0f0f0;       /* main text color */
+      --muted: #888898;      /* grey — used for labels and placeholders */
+      --radius: 14px;        /* how rounded the corners are */
+    }
+
+    /* Style the whole page body */
+    body {
+      font-family: 'DM Mono', monospace;  /* monospace font for a clean techy look */
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;  /* always fill the full screen height */
+      padding: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: 32px 40px 0;
+      display: flex;         /* lay children side by side */
+      align-items: flex-end; /* align them to the bottom */
+      gap: 16px;
+    }
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+    /* The word "Tracker" in the title gets the green accent color */
+    header h1 span { color: var(--accent); }
+    .header-sub {
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+    }
+
+    /* ── TABS ── */
+    /* The tab button row sits above the main panel */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 28px 40px 0;
+    }
+    /* Each tab button */
+    .tab-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 10px 22px;
+      border-radius: 8px 8px 0 0;  /* only round the top corners */
+      border: 1px solid transparent;
+      border-bottom: none;          /* no bottom border so it blends into the panel */
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.18s;        /* smooth color change on hover */
+      letter-spacing: 0.04em;
+    }
+    /* When hovering over a tab */
+    .tab-btn:hover { color: var(--text); background: var(--surface2); }
+    /* The currently selected tab */
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--accent);
+      border-color: var(--border);
+    }
+
+    /* ── MAIN PANEL ── */
+    /* The white box that holds tab content */
+    .main {
+      margin: 0 40px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0 var(--radius) var(--radius) var(--radius); /* no top-left corner so it joins the active tab */
+      padding: 36px;
+      min-height: 500px;
+    }
+
+    /* Hide all tab panels by default */
+    .tab-panel { display: none; }
+    /* Only the active one is visible */
+    .tab-panel.active { display: block; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: var(--accent);
+      letter-spacing: -0.3px;
+    }
+
+    /* ── FORM LAYOUT ── */
+    /* Two-column grid for the Add Expense form */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;  /* two equal columns */
+      gap: 16px;
+      max-width: 640px;
+    }
+    /* Each label + input pair stacks vertically */
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    /* .full makes an element span both columns (used for the submit button) */
+    .form-group.full { grid-column: 1 / -1; }
+    /* Style for all labels */
+    label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;  /* always show in caps */
+    }
+    /* Style for all text inputs and dropdowns */
+    input, select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem;
+      padding: 12px 14px;
+      outline: none;
+      transition: border 0.15s;
+      width: 100%;
+    }
+    /* Green border when an input is focused/clicked */
+    input:focus, select:focus { border-color: var(--accent); }
+    /* Dark background for dropdown options */
+    select option { background: var(--surface2); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 13px 28px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+    }
+    /* Main green button */
+    .btn-primary { background: var(--accent); color: #0e0e10; }
+    /* Slightly brighter + lift up when hovered */
+    .btn-primary:hover { background: #d8ff70; transform: translateY(-1px); }
+    /* Red outlined delete button */
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+    }
+    /* Fills red when hovered */
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+
+    /* ── TOAST NOTIFICATION ── */
+    /* The little popup message that appears in the bottom-right */
+    #toast {
+      position: fixed;   /* stays in corner even when scrolling */
+      bottom: 32px;
+      right: 32px;
+      background: var(--accent);
+      color: #0e0e10;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 14px 24px;
+      border-radius: 10px;
+      opacity: 0;                      /* hidden by default */
+      transform: translateY(12px);     /* starts slightly below its final position */
+      transition: all 0.25s;           /* smooth fade + slide animation */
+      pointer-events: none;            /* can't be clicked */
+      z-index: 999;                    /* always on top of everything */
+    }
+    /* When .show is added, the toast becomes visible */
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── EXPENSE TABLE ── */
+    .expense-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    /* Table column headers */
+    .expense-table th {
+      text-align: left;
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    /* Table data cells */
+    .expense-table td {
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    /* Remove the bottom border on the last row */
+    .expense-table tr:last-child td { border-bottom: none; }
+    /* Highlight row when you hover over it */
+    .expense-table tr:hover td { background: var(--surface2); }
+    /* Amount column shows in green */
+    .amount-cell { color: var(--accent); font-weight: 500; }
+    /* Shown when there are no expenses */
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 60px 0;
+      font-size: 0.85rem;
+    }
+    .empty-state .emoji { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+
+    /* ── SUMMARY CARDS ── */
+    /* Three stat boxes side by side */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    /* Small uppercase label above the big number */
+    .card-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    /* The big number */
+    .card-value { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; }
+    /* Color variants applied by JavaScript depending on the value */
+    .card-value.green { color: var(--accent); }
+    .card-value.red { color: var(--danger); }
+    .card-value.blue { color: var(--accent2); }
+
+    /* ── BUDGET PROGRESS BAR ── */
+    .budget-section { margin-bottom: 32px; }
+    /* The grey track behind the bar */
+    .budget-bar-wrap {
+      background: var(--surface2);
+      border-radius: 999px;  /* fully rounded pill shape */
+      height: 10px;
+      overflow: hidden;       /* hides the fill if it overflows */
+      margin: 10px 0 6px;
+    }
+    /* The colored fill that grows based on % spent */
+    .budget-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent);  /* green by default */
+      transition: width 0.6s cubic-bezier(.4,0,.2,1);  /* smooth animation when width changes */
+    }
+    /* Turns yellow when over 75% spent */
+    .budget-bar-fill.warning { background: #f0c060; }
+    /* Turns red when over 100% spent */
+    .budget-bar-fill.danger { background: var(--danger); }
+    /* Labels below the bar (left = % used, right = $ left) */
+    .budget-bar-labels { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); }
+
+    /* ── CATEGORY BREAKDOWN BARS ── */
+    .breakdown-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    /* One row per category */
+    .breakdown-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    /* Category emoji + name */
+    .breakdown-cat { width: 110px; font-size: 0.8rem; white-space: nowrap; }
+    /* Grey track for each category bar */
+    .breakdown-bar-wrap {
+      flex: 1;  /* takes up all remaining space in the row */
+      background: var(--surface2);
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+    }
+    /* Colored fill for each category */
+    .breakdown-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--accent2);
+      transition: width 0.5s ease;
+    }
+    /* Dollar amount on the right */
+    .breakdown-amount { font-size: 0.8rem; color: var(--accent); width: 70px; text-align: right; }
+
+    /* ── SETTINGS ── */
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 400px;
+    }
+    /* Input takes up remaining space next to the Save button */
+    .settings-row input { flex: 1; }
+
+    /* ── FILTER ROW (All Expenses tab) ── */
+    .filter-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+    /* Cap the filter dropdowns so they don't grow too wide */
+    .filter-row select, .filter-row input { max-width: 200px; }
+    .filter-label { font-size: 0.72rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <!-- The word "Tracker" is wrapped in <span> so we can color it green -->
+  <h1>💸 Expense <span>Tracker</span></h1>
+  <span class="header-sub">track every dollar.</span>
+</header>
+
+<!-- ── TAB BUTTONS ── -->
+<!-- onclick calls switchTab() with the name of the tab to show -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('add')">➕ Add Expense</button>
+  <button class="tab-btn" onclick="switchTab('expenses')">📋 All Expenses</button>
+  <button class="tab-btn" onclick="switchTab('summary')">📊 Summary</button>
+  <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
+</div>
+
+<!-- ── MAIN PANEL ── -->
+<div class="main">
+
+  <!-- TAB 1: ADD EXPENSE -->
+  <!-- id="tab-add" matches what switchTab('add') looks for -->
+  <div class="tab-panel active" id="tab-add">
+    <div class="section-title">New Expense</div>
+    <div class="form-grid">
+
+      <!-- Name input -->
+      <div class="form-group">
+        <label>Expense Name</label>
+        <!-- id="exp-name" lets JavaScript grab this value -->
+        <input type="text" id="exp-name" placeholder="e.g. Coffee" />
+      </div>
+
+      <!-- Amount input — min=0 prevents negatives, step=0.01 allows cents -->
+      <div class="form-group">
+        <label>Amount ($)</label>
+        <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01" />
+      </div>
+
+      <!-- Category dropdown -->
+      <div class="form-group">
+        <label>Category</label>
+        <select id="exp-category">
+          <option>🍔 Food</option>
+          <option>🏡 Home</option>
+          <option>🏢 Work</option>
+          <option>🎉 Fun</option>
+          <option>📃 Misc</option>
+        </select>
+      </div>
+
+      <!-- Date picker — JavaScript sets this to today by default -->
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="exp-date" />
+      </div>
+
+      <!-- Submit button — .full makes it span both columns -->
+      <div class="form-group full">
+        <button class="btn btn-primary" onclick="addExpense()">Add Expense</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: ALL EXPENSES -->
+  <div class="tab-panel" id="tab-expenses">
+    <div class="section-title">All Expenses</div>
+
+    <!-- Filter bar — automatically reloads the table when changed -->
+    <div class="filter-row">
+      <span class="filter-label">Filter:</span>
+      <!-- onchange means it fires loadExpenses() every time you pick a new value -->
+      <select id="filter-cat" onchange="loadExpenses()">
+        <option value="">All Categories</option>
+        <option>🍔 Food</option>
+        <option>🏡 Home</option>
+        <option>🏢 Work</option>
+        <option>🎉 Fun</option>
+        <option>📃 Misc</option>
+      </select>
+      <!-- type="month" shows a year+month picker (e.g. 2025-05) -->
+      <input type="month" id="filter-month" onchange="loadExpenses()" />
+    </div>
+
+    <!-- The table — JavaScript fills in <tbody> dynamically -->
+    <table class="expense-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Amount</th>
+          <th>Date</th>
+          <th></th> <!-- empty header for the Delete column -->
+        </tr>
+      </thead>
+      <!-- id="expense-tbody" is where JavaScript injects the rows -->
+      <tbody id="expense-tbody">
+        <!-- Default message before any data loads -->
+        <tr><td colspan="5"><div class="empty-state"><span class="emoji">🧾</span>No expenses yet.</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TAB 3: SUMMARY -->
+  <div class="tab-panel" id="tab-summary">
+    <div class="section-title">Monthly Summary</div>
+
+    <!-- Three stat cards — JavaScript updates the numbers inside these -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Total Spent</div>
+        <!-- id="sum-total" is targeted by JavaScript to insert the total -->
+        <div class="card-value red" id="sum-total">$0.00</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Monthly Budget</div>
+        <div class="card-value blue" id="sum-budget">$0.00</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Remaining</div>
+        <!-- JavaScript changes this to red if the user goes over budget -->
+        <div class="card-value green" id="sum-remaining">$0.00</div>
+      </div>
+    </div>
+
+    <!-- Budget progress bar section -->
+    <div class="budget-section">
+      <div class="breakdown-title">Budget Usage</div>
+      <!-- The grey track -->
+      <div class="budget-bar-wrap">
+        <!-- id="budget-bar" — JavaScript changes its width and color -->
+        <div class="budget-bar-fill" id="budget-bar" style="width:0%"></div>
+      </div>
+      <!-- Text labels below the bar -->
+      <div class="budget-bar-labels">
+        <span id="bar-pct">0% used</span>
+        <span id="bar-left"></span>
+      </div>
+    </div>
+
+    <!-- Per-category bar chart — JavaScript generates rows here -->
+    <div class="breakdown-title">Spending by Category</div>
+    <div id="breakdown-rows"></div>
+  </div>
+
+  <!-- TAB 4: SETTINGS -->
+  <div class="tab-panel" id="tab-settings">
+    <div class="section-title">Settings</div>
+    <div class="form-group" style="max-width:400px; margin-bottom:24px;">
+      <label>Monthly Budget ($)</label>
+      <!-- Input and Save button sit side by side in .settings-row -->
+      <div class="settings-row">
+        <input type="number" id="budget-input" placeholder="e.g. 2000" min="0" step="50" />
+        <button class="btn btn-primary" onclick="saveBudget()">Save</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast notification — hidden until JavaScript adds the .show class -->
+<div id="toast">✅ Expense added!</div>
+
+<script>
+  // ── ON PAGE LOAD ──────────────────────────────────────────────────────────
+
+  // Set the date field to today so the user doesn't have to type it
+  // toISOString() gives "2025-05-15T..." and .split("T")[0] keeps just "2025-05-15"
+  document.getElementById("exp-date").value = new Date().toISOString().split("T")[0];
+
+
+  // ── TAB SWITCHING ─────────────────────────────────────────────────────────
+
+  function switchTab(name) {
+    // Hide all tab panels by removing the "active" class from all of them
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    // Deactivate all tab buttons
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    // Show only the selected panel
+    document.getElementById("tab-" + name).classList.add("active");
+    // Highlight the button that was clicked (event.target is the clicked button)
+    event.target.classList.add("active");
+    // Load data when switching to these tabs
+    if (name === "expenses") loadExpenses();
+    if (name === "summary") loadSummary();
+  }
+
+
+  // ── TOAST NOTIFICATION ───────────────────────────────────────────────────
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    // Set the message text
+    t.textContent = msg;
+    // Add .show to make it visible (CSS handles the animation)
+    t.classList.add("show");
+    // After 2.5 seconds, remove .show to hide it again
+    setTimeout(() => t.classList.remove("show"), 2500);
+  }
+
+
+  // ── ADD EXPENSE ──────────────────────────────────────────────────────────
+
+  // async means this function can wait for the server to respond without freezing the page
+  async function addExpense() {
+    // Grab the values the user typed in
+    const name = document.getElementById("exp-name").value.trim(); // .trim() removes extra spaces
+    const amount = document.getElementById("exp-amount").value;
+    const category = document.getElementById("exp-category").value;
+    const date = document.getElementById("exp-date").value;
+
+    // If name or amount is empty, show a warning and stop
+    if (!name || !amount) { showToast("⚠️ Fill in name and amount!"); return; }
+
+    // Send the data to Flask as a POST request
+    // await means "wait for the server to respond before moving on"
+    await fetch("/api/expenses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }, // tell Flask we're sending JSON
+      body: JSON.stringify({ name, amount: parseFloat(amount), category, date }) // convert to JSON string
+    });
+
+    // Clear the name and amount fields after saving
+    document.getElementById("exp-name").value = "";
+    document.getElementById("exp-amount").value = "";
+    // Show the success notification
+    showToast("✅ Expense added!");
+  }
+
+
+  // ── LOAD ALL EXPENSES ────────────────────────────────────────────────────
+
+  async function loadExpenses() {
+    // Ask Flask for all expenses
+    const res = await fetch("/api/expenses");
+    // Parse the JSON response into a JavaScript array
+    let expenses = await res.json();
+
+    // Read the current filter values
+    const catFilter = document.getElementById("filter-cat").value;
+    const monthFilter = document.getElementById("filter-month").value;
+
+    // If a category filter is selected, keep only matching expenses
+    if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
+    // If a month filter is selected, keep only expenses whose date starts with that month
+    if (monthFilter) expenses = expenses.filter(e => e.date && e.date.startsWith(monthFilter));
+
+    // Get the table body element where rows will be injected
+    const tbody = document.getElementById("expense-tbody");
+
+    // If there are no expenses to show, display the empty state message
+    if (expenses.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><span class="emoji">🧾</span>No expenses found.</div></td></tr>`;
+      return;
+    }
+
+    // Build one <tr> row for each expense and join them into one HTML string
+    // .map() transforms each expense into a row, .join("") combines all rows into one string
+    tbody.innerHTML = expenses.map((e, i) => `
+      <tr>
+        <td>${e.name}</td>
+        <td>${e.category}</td>
+        <!-- .toFixed(2) formats number to 2 decimal places -->
+        <td class="amount-cell">$${parseFloat(e.amount).toFixed(2)}</td>
+        <!-- Show a dash if no date is recorded -->
+        <td>${e.date || "—"}</td>
+        <!-- Each delete button passes its row index to deleteExpense() -->
+        <td><button class="btn btn-danger" onclick="deleteExpense(${i})">Delete</button></td>
+      </tr>
+    `).join("");
+  }
+
+
+  // ── DELETE AN EXPENSE ────────────────────────────────────────────────────
+
+  async function deleteExpense(index) {
+    // Send a DELETE request to Flask with the expense's index in the URL
+    await fetch(`/api/expenses/${index}`, { method: "DELETE" });
+    showToast("🗑️ Expense deleted.");
+    // Reload the table so the deleted row disappears
+    loadExpenses();
+  }
+
+
+  // ── LOAD SUMMARY ─────────────────────────────────────────────────────────
+
+  async function loadSummary() {
+    // Ask Flask for the summary data
+    const res = await fetch("/api/summary");
+    const data = await res.json();
+
+    // Update the three stat cards
+    document.getElementById("sum-total").textContent = `$${data.total.toFixed(2)}`;
+    document.getElementById("sum-budget").textContent = `$${data.budget.toFixed(2)}`;
+
+    // Calculate remaining and choose red or green depending on whether user is over budget
+    const rem = data.remaining;
+    const remEl = document.getElementById("sum-remaining");
+    // Show "over!" if negative
+    remEl.textContent = `$${Math.abs(rem).toFixed(2)}${rem < 0 ? " over!" : ""}`;
+    // Switch the color class
+    remEl.className = "card-value " + (rem < 0 ? "red" : "green");
+
+    // Calculate what % of the budget has been used, capped at 100%
+    const pct = Math.min((data.total / data.budget) * 100, 100);
+    const bar = document.getElementById("budget-bar");
+    // Set the width of the bar (e.g. "62%")
+    bar.style.width = pct + "%";
+    // Add a color class depending on how close to the limit we are
+    bar.className = "budget-bar-fill" + (pct >= 100 ? " danger" : pct >= 75 ? " warning" : "");
+
+    // Update the text labels below the bar
+    document.getElementById("bar-pct").textContent = `${pct.toFixed(1)}% used`;
+    document.getElementById("bar-left").textContent = rem >= 0
+      ? `$${rem.toFixed(2)} left`
+      : `$${Math.abs(rem).toFixed(2)} over budget`;
+
+    // ── CATEGORY BREAKDOWN BARS ──
+    // Find the highest category total so we can scale all bars relative to it
+    const maxVal = Math.max(...Object.values(data.by_category), 1);
+    // Each category gets a different color
+    const colors = ["#c8f060","#60d0f0","#f0c060","#f06060","#c060f0"];
+    let i = 0; // counter to cycle through the colors array
+
+    // Build one row per category and inject into the page
+    // Object.entries() converts {Food: 45, Home: 120} into [["Food", 45], ["Home", 120]]
+    document.getElementById("breakdown-rows").innerHTML =
+      Object.entries(data.by_category).map(([cat, amt]) => `
+        <div class="breakdown-row">
+          <div class="breakdown-cat">${cat}</div>
+          <div class="breakdown-bar-wrap">
+            <!-- Width is proportional to the max category spend; color cycles through the array -->
+            <div class="breakdown-bar-fill" style="width:${(amt/maxVal)*100}%; background:${colors[i++ % colors.length]}"></div>
+          </div>
+          <div class="breakdown-amount">$${amt.toFixed(2)}</div>
+        </div>
+      `).join("") || "<div style='color:var(--muted);font-size:0.85rem'>No data yet.</div>";
+  }
+
+
+  // ── SAVE BUDGET ──────────────────────────────────────────────────────────
+
+  async function saveBudget() {
+    const val = document.getElementById("budget-input").value;
+    // Don't do anything if the field is empty
+    if (!val) return;
+    // Send the new budget to Flask
+    await fetch("/api/budget", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ budget: parseFloat(val) })
+    });
+    showToast("✅ Budget saved!");
+  }
+</script>
+</body>
+</html>
